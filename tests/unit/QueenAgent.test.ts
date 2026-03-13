@@ -74,7 +74,6 @@ describe('QueenAgent', () => {
       createdAt: new Date().toISOString(),
     };
     const queen = new QueenAgent(
-      new MockStateMachine() as never,
       new MockRouter() as never,
       new MockMemory() as never,
       new MockBus() as never,
