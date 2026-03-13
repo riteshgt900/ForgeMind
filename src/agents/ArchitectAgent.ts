@@ -39,8 +39,22 @@ export class ArchitectAgent extends BaseAgent {
 
     const tree = await this.github.getRepoTree();
     const files = tree.ok ? tree.data ?? [] : [];
-    const affected = files.filter((f) => f.startsWith('src/')).slice(0, 8);
-    const target = affected.length > 0 ? affected : ['src/index.ts'];
+    
+    // Improved heuristic: look for file names mentioned in the task or default to index.ts
+    const taskContent = `${task.title} ${task.description}`.toLowerCase();
+    let target = files.filter(f => {
+      const parts = f.toLowerCase().split(/[\\/]/);
+      const name = parts[parts.length - 1];
+      return name && (taskContent.includes(name) || (name.includes('index') && taskContent.includes('route')));
+    });
+
+    if (target.length === 0) {
+      target = ['src/index.ts'];
+    }
+    
+    // Limit to 3 files for safety in free tier
+    target = target.slice(0, 3);
+    
     const changePlan = target.map((f) => ({ file: f, changeType: 'modify' as const, summary: `Update ${f} for ${task.title}` }));
 
     const scope = this.docs.generate(task, {
