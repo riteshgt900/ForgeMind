@@ -1,0 +1,44 @@
+{
+  "name": "forgemind-ba-to-deploy",
+  "version": "3.0.0",
+  "workflow": "ba-to-deploy",
+  "swarm": {
+    "topology": "hierarchical",
+    "maxAgents": 8,
+    "memoryBackend": "agentdb-hnsw",
+    "contextAutopilot": true,
+    "consensusAlgorithm": "byzantine-fault-tolerant"
+  },
+  "agents": [
+    { "name": "queen", "model": "claude-opus-4-6" },
+    { "name": "ba-interpreter", "model": "claude-sonnet-4-6" },
+    { "name": "architect", "model": "claude-opus-4-6" },
+    { "name": "coder", "model": "claude-sonnet-4-6" },
+    { "name": "tester", "model": "claude-sonnet-4-6" },
+    { "name": "reviewer-quality", "model": "claude-sonnet-4-6" },
+    { "name": "reviewer-security", "model": "claude-sonnet-4-6" },
+    { "name": "reviewer-performance", "model": "claude-sonnet-4-6" },
+    { "name": "debugger", "model": "claude-sonnet-4-6" },
+    { "name": "rollback", "model": "claude-haiku-4-5-20251001" },
+    { "name": "devops", "model": "claude-haiku-4-5-20251001" },
+    { "name": "monitor", "model": "claude-haiku-4-5-20251001" }
+  ],
+  "approvalGates": [
+    {
+      "name": "scope-sign-off",
+      "after": "architect",
+      "before": "coder",
+      "via": ["slack", "google-chat"],
+      "timeoutHours": 24,
+      "allowIteration": true,
+      "maxIterations": 5,
+      "requiredApprovers": 1
+    }
+  ],
+  "mcpServers": ["ruflo", "github", "filesystem"],
+  "hooks": {
+    "PostToolUse": ["run-linter", "update-slack-progress"],
+    "Stop": ["notify-slack-complete", "create-pr"]
+  },
+  "costLimits": { "perTaskUsd": 5, "dailyUsd": 100, "alertThresholdUsd": 3 }
+}
