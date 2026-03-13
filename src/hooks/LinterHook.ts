@@ -1,6 +1,8 @@
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
 
+import path from 'node:path';
+
 const execAsync = promisify(exec);
 
 export class LinterHook {
@@ -10,8 +12,9 @@ export class LinterHook {
       return { success: true, output: 'No files provided.' };
     }
     try {
-      const args = filePaths.map((p) => `"${p}"`).join(' ');
-      const { stdout, stderr } = await execAsync(`npm.cmd run lint -- ${args}`);
+      const args = filePaths.map((p) => `"${path.relative(process.cwd(), p)}"`).join(' ');
+      const bin = path.join(process.cwd(), 'node_modules', '.bin', 'eslint.cmd');
+      const { stdout, stderr } = await execAsync(`"${bin}" ${args}`);
       return { success: true, output: `${stdout}${stderr}`.trim() };
     } catch (error: unknown) {
       return { success: false, output: error instanceof Error ? error.message : String(error) };

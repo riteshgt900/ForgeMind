@@ -9,7 +9,6 @@ import { costTracker } from '../utils/costTracker';
 import type { AgentResult, Task } from '../types';
 
 export class QueenAgent {
-  private readonly stateMachine: StateMachine;
   private readonly router: TaskRouter;
   private readonly memory: AgentDB;
   private readonly bus: MessageBus;
@@ -18,14 +17,12 @@ export class QueenAgent {
 
   /** Initializes queen orchestration dependencies. */
   constructor(
-    stateMachine?: StateMachine,
     router?: TaskRouter,
     memory?: AgentDB,
     bus?: MessageBus,
     gate?: ApprovalGate,
     consensus?: ConsensusEngine,
   ) {
-    this.stateMachine = stateMachine ?? new StateMachine();
     this.router = router ?? new TaskRouter();
     this.memory = memory ?? AgentDB.getInstance();
     this.bus = bus ?? MessageBus.getInstance();
@@ -35,12 +32,14 @@ export class QueenAgent {
 
   /** Orchestrates end-to-end task workflow from BA interpretation to PR. */
   async orchestrate(task: Task): Promise<void> {
+    // Each task gets its own StateMachine so concurrent tasks never collide.
+    const stateMachine = new StateMachine();
     const startedAt = Date.now();
     logger.success('queen', `Starting task ${task.id}`);
     await this.memory.store(task.id, 'queen', task);
 
     try {
-      await this.stateMachine.transition('ANALYZING');
+      await stateMachine.transition('ANALYZING');
       await this.bus.publish('workflow.milestone', { taskId: task.id, state: 'ANALYZING' });
 
       const [interpretation, scopeSeed] = await Promise.all([
@@ -67,9 +66,9 @@ export class QueenAgent {
         throw new Error('Missing scope');
       }
 
-      await this.stateMachine.transition('SCOPING');
+      await stateMachine.transition('SCOPING');
       await this.bus.publish('workflow.milestone', { taskId: task.id, state: 'SCOPING' });
-      await this.stateMachine.transition('AWAITING_APPROVAL');
+      await stateMachine.transition('AWAITING_APPROVAL');
       await this.bus.publish('workflow.milestone', { taskId: task.id, state: 'AWAITING_APPROVAL' });
       const channel = task.source?.channel === 'google-chat' ? 'google-chat' : 'slack';
       const approved = await this.gate.requestApproval(
@@ -81,13 +80,13 @@ export class QueenAgent {
         task.source?.threadTs ?? task.source?.spaceId,
       );
       if (!approved) {
-        await this.stateMachine.transition('REJECTED');
+        await stateMachine.transition('REJECTED');
         logger.fail('queen', `Task ${task.id} rejected`);
         await this.bus.publish('workflow.milestone', { taskId: task.id, state: 'REJECTED' });
         return;
       }
 
-      await this.stateMachine.transition('IMPLEMENTING');
+      await stateMachine.transition('IMPLEMENTING');
       await this.bus.publish('workflow.milestone', { taskId: task.id, state: 'IMPLEMENTING' });
       const implementation = await this.router.dispatch('coder', {
         task,
@@ -99,7 +98,7 @@ export class QueenAgent {
         },
       });
 
-      await this.stateMachine.transition('TESTING');
+      await stateMachine.transition('TESTING');
       await this.bus.publish('workflow.milestone', { taskId: task.id, state: 'TESTING' });
       let testResult = await this.router.dispatch('tester', {
         task,
@@ -111,27 +110,27 @@ export class QueenAgent {
         },
       });
       if (!testResult.passed) {
-        await this.stateMachine.transition('DEBUGGING');
+        await stateMachine.transition('DEBUGGING');
         await this.bus.publish('workflow.milestone', { taskId: task.id, state: 'DEBUGGING' });
         const fixed = await this.autoFix(task, testResult, implementation);
         if (!fixed.fixed || !fixed.testResult) {
-          await this.stateMachine.transition('FAILED');
+          await stateMachine.transition('FAILED');
           await this.router.dispatch('rollback', { task, reason: 'Auto-fix exhausted' });
           return;
         }
-        await this.stateMachine.transition('TESTING');
+        await stateMachine.transition('TESTING');
         testResult = fixed.testResult;
       }
 
-      await this.stateMachine.transition('REVIEWING');
+      await stateMachine.transition('REVIEWING');
       await this.bus.publish('workflow.milestone', { taskId: task.id, state: 'REVIEWING' });
       const review = await this.runReview(task, implementation);
       if (!review.passed) {
-        await this.stateMachine.transition('FAILED');
+        await stateMachine.transition('FAILED');
         return;
       }
 
-      await this.stateMachine.transition('DEPLOYING');
+      await stateMachine.transition('DEPLOYING');
       await this.bus.publish('workflow.milestone', { taskId: task.id, state: 'DEPLOYING' });
       const usage = costTracker.getTaskUsage(task.id);
       const pr = await this.router.dispatch('devops', {
@@ -156,7 +155,7 @@ export class QueenAgent {
         throw new Error(pr.message);
       }
 
-      await this.stateMachine.transition('COMPLETE');
+      await stateMachine.transition('COMPLETE');
       await this.bus.publish('workflow.milestone', { taskId: task.id, state: 'COMPLETE', pr: pr.pr });
       await this.memory.store(task.id, 'devops', pr.data ?? pr.message);
       costTracker.record(task.id);
@@ -166,8 +165,8 @@ export class QueenAgent {
         'queen',
         `Orchestration failed: ${error instanceof Error ? error.message : String(error)}`,
       );
-      if (this.stateMachine.getState() !== 'FAILED') {
-        await this.stateMachine.transition('FAILED').catch(() => Promise.resolve());
+      if (stateMachine.getState() !== 'FAILED') {
+        await stateMachine.transition('FAILED').catch(() => Promise.resolve());
       }
       await this.router.dispatch('rollback', {
         task,

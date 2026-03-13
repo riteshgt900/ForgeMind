@@ -1,8 +1,22 @@
+# Environment
+.env
+.env.*
+!.env.example
+
+# Node
 node_modules/
 dist/
 coverage/
-.env
-*.log
-forgemind.db
-prisma/dev.db
+
+# Prisma
+prisma/*.db
+prisma/*.db-journal
+
+# Temp files
 .tmp/
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

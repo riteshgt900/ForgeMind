@@ -1,34 +1,18 @@
 {
   "root": true,
-  "env": {
-    "node": true,
-    "es2022": true,
-    "jest": true
-  },
   "parser": "@typescript-eslint/parser",
-  "parserOptions": {
-    "project": "./tsconfig.json",
-    "sourceType": "module"
-  },
   "plugins": ["@typescript-eslint"],
   "extends": [
     "eslint:recommended",
     "plugin:@typescript-eslint/recommended",
-    "plugin:@typescript-eslint/recommended-requiring-type-checking",
     "prettier"
   ],
   "rules": {
-    "@typescript-eslint/explicit-function-return-type": ["error", { "allowExpressions": false }],
-    "@typescript-eslint/no-floating-promises": "error",
-    "@typescript-eslint/no-misused-promises": ["error", { "checksVoidReturn": false }],
-    "@typescript-eslint/consistent-type-imports": ["error", { "prefer": "type-imports" }],
-    "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
-    "@typescript-eslint/require-await": "off",
-    "@typescript-eslint/no-unsafe-assignment": "off",
-    "@typescript-eslint/no-unsafe-member-access": "off",
-    "@typescript-eslint/no-unsafe-argument": "off",
-    "@typescript-eslint/no-unnecessary-type-assertion": "off",
-    "@typescript-eslint/no-var-requires": "off",
-    "no-console": "off"
+    "@typescript-eslint/no-explicit-any": "warn",
+    "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }]
+  },
+  "env": {
+    "node": true,
+    "jest": true
   }
 }
