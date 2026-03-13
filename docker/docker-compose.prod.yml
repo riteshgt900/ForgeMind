@@ -1,0 +1,40 @@
+version: '3.9'
+
+services:
+  app:
+    image: forgemind:latest
+    restart: always
+    env_file:
+      - ../.env
+    ports:
+      - '3000:3000'
+    depends_on:
+      - redis
+      - postgres
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+    healthcheck:
+      test: ['CMD', 'node', 'scripts/health-check.js']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+
+  postgres:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: forgemind
+      POSTGRES_PASSWORD: forgemind
+      POSTGRES_DB: forgemind
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_prod_data:

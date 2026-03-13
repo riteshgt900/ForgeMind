@@ -1,0 +1,1 @@
+@ForgemindBot Add a password strength indicator to the registration form. It should show weak/medium/strong in real time and block form submission when weak.

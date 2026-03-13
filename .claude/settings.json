@@ -1,0 +1,25 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npm.cmd run lint -- $CLAUDE_FILE_PATHS"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node scripts/notify-slack.js --phase=$RUFLO_PHASE --task=$RUFLO_TASK_ID"
+          }
+        ]
+      }
+    ]
+  }
+}

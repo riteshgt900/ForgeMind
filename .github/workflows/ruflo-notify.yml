@@ -1,0 +1,28 @@
+name: Ruflo Workflow Notifications
+on:
+  pull_request:
+    types: [opened, review_requested, reopened, synchronize]
+  check_suite:
+    types: [completed]
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    if: startsWith(github.head_ref, 'feature/ruflo-')
+    steps:
+      - uses: slackapi/slack-github-action@v2
+        with:
+          payload: |
+            {
+              "text":"FORGEMIND PR update: ${{ github.event.pull_request.html_url }}",
+              "attachments":[
+                {
+                  "color":"good",
+                  "fields":[
+                    {"title":"PR","value":"${{ github.event.pull_request.html_url }}"},
+                    {"title":"Branch","value":"${{ github.head_ref }}"}
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}

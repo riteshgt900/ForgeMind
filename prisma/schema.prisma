@@ -1,0 +1,19 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model GateRecord {
+  id         String   @id @default(cuid())
+  gateId      String   @unique
+  taskId      String
+  status      String
+  scopeJson   String
+  comment     String?
+  createdAt   DateTime @default(now())
+  resolvedAt  DateTime?
+}

@@ -1,0 +1,15 @@
+{
+  "name": "mock-repo",
+  "files": [
+    "src/index.ts",
+    "src/components/RegistrationForm.tsx",
+    "src/utils/passwordStrength.ts",
+    "tests/unit/passwordStrength.test.ts",
+    "README.md"
+  ],
+  "domains": {
+    "frontend": ["src/components/RegistrationForm.tsx"],
+    "backend": ["src/index.ts"],
+    "testing": ["tests/unit/passwordStrength.test.ts"]
+  }
+}
