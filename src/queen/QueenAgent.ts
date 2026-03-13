@@ -9,7 +9,6 @@ import { costTracker } from '../utils/costTracker';
 import type { AgentResult, Task } from '../types';
 
 export class QueenAgent {
-  private readonly stateMachine: StateMachine;
   private readonly router: TaskRouter;
   private readonly memory: AgentDB;
   private readonly bus: MessageBus;
@@ -18,14 +17,12 @@ export class QueenAgent {
 
   /** Initializes queen orchestration dependencies. */
   constructor(
-    stateMachine?: StateMachine,
     router?: TaskRouter,
     memory?: AgentDB,
     bus?: MessageBus,
     gate?: ApprovalGate,
     consensus?: ConsensusEngine,
   ) {
-    this.stateMachine = stateMachine ?? new StateMachine();
     this.router = router ?? new TaskRouter();
     this.memory = memory ?? AgentDB.getInstance();
     this.bus = bus ?? MessageBus.getInstance();
@@ -35,12 +32,14 @@ export class QueenAgent {
 
   /** Orchestrates end-to-end task workflow from BA interpretation to PR. */
   async orchestrate(task: Task): Promise<void> {
+    // Each task gets its own StateMachine so concurrent tasks never collide.
+    const stateMachine = new StateMachine();
     const startedAt = Date.now();
     logger.success('queen', `Starting task ${task.id}`);
     await this.memory.store(task.id, 'queen', task);
 
     try {
-      await this.stateMachine.transition('ANALYZING');
+      await stateMachine.transition('ANALYZING');
       await this.bus.publish('workflow.milestone', { taskId: task.id, state: 'ANALYZING' });
 
       const [interpretation, scopeSeed] = await Promise.all([
